@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: spring-cassandra
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+  cassandra:
+    keyspace-name: trigger_notification
+    local-datacenter: datacenter1
+    contact-points: localhost
