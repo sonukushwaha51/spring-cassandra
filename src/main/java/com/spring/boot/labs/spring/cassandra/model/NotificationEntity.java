@@ -1,34 +1,35 @@
 package com.spring.boot.labs.spring.cassandra.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.GeneratedValue;
 import lombok.Data;
+import org.springframework.data.cassandra.core.mapping.CassandraType;
+import org.springframework.data.cassandra.core.mapping.Column;
 import org.springframework.data.cassandra.core.mapping.PrimaryKey;
+import org.springframework.data.cassandra.core.mapping.Table;
 
 import java.time.Instant;
 import java.util.Date;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Data
-@Table(name = "notification")
+@Table("notification")
 public class NotificationEntity {
     @PrimaryKey
     private NotificationPrimaryKey key;
 
 
-    @Column(name="user_id")
+    @Column("user_id")
     private String userId;
 
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "notification_id")
-    private String notificationId;
+    @Column("notification_id")
+    private String notificationId = UUID.randomUUID().toString();
 
-    @Column(name = "event_id")
+    @Column("event_id")
     private String eventId;
 
     private Long timestamp;
 
     private String items;
-
-    private Date expiration = Date.from(Instant.now().plus(7, TimeUnit.MINUTES.toChronoUnit()));
 
 }

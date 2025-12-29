@@ -9,4 +9,6 @@ import java.util.List;
 public interface NotificationRepository extends TTLRepository<NotificationEntity, NotificationPrimaryKey>, CassandraRepository<NotificationEntity, NotificationPrimaryKey> {
 
     List<NotificationEntity> findAllByUserIdAndEventId(String userId, String eventId);
+
+    List<NotificationEntity> findAllByUserId(String userId);
 }
