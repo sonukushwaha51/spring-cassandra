@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: spring-cassandra
+  cloud:
+    gcp:
+      pubsub:
+        topic: orders
+        project-id: eighth-saga-474816-a6
+      subscriber:
+        subscription-name: orders-management-delete-sub
+#      credentials:
+#        encoded-key: ENC(sjhdjs) // needed when application is not deployed in GCP
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+  cassandra:
+    keyspace-name: trigger_notification
+    local-datacenter: datacenter1  # Nearest Data center
+    contact-points: localhost # list of IP addresses
+notifications:
+  ttl: 86400
