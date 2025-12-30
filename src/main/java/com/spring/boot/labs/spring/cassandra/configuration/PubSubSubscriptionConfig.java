@@ -5,8 +5,11 @@ import com.google.cloud.spring.pubsub.core.PubSubTemplate;
 import com.google.cloud.spring.pubsub.integration.AckMode;
 import com.google.cloud.spring.pubsub.integration.inbound.PubSubInboundChannelAdapter;
 import com.google.cloud.spring.pubsub.support.BasicAcknowledgeablePubsubMessage;
+import com.google.cloud.spring.pubsub.support.GcpPubSubHeaders;
+import com.google.pubsub.v1.PubsubMessage;
 import com.spring.boot.labs.spring.cassandra.model.NotificationDelete;
 import com.spring.boot.labs.spring.cassandra.service.NotificationService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,14 +20,21 @@ import org.springframework.integration.channel.DirectChannel;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Objects;
+
 @Configuration
+@Slf4j
 public class PubSubSubscriptionConfig {
 
-    @Value("${spring.cloud.gcp.pubsub.subscriber.subscription-name}")
+    @Value("${spring.cloud.gcp.subscriber.subscription-name}")
     String subscriptionName;
 
     @Autowired
     NotificationService notificationService;
+
+    @Autowired
+    ObjectMapper objectMapper;
 
     @Bean
     public MessageChannel pubsubInputChannel() {
@@ -32,28 +42,27 @@ public class PubSubSubscriptionConfig {
     }
 
     @Bean
-    public ObjectMapper objectMapper() {
-        return new ObjectMapper();
-    }
-
-    @Bean
     public PubSubInboundChannelAdapter inboundChannelAdapter(@Qualifier("pubsubInputChannel") MessageChannel inputChannel, PubSubTemplate pubSubTemplate) {
         PubSubInboundChannelAdapter adapter = new PubSubInboundChannelAdapter(pubSubTemplate, subscriptionName);
         adapter.setAckMode(AckMode.MANUAL);
-        adapter.setPayloadType(NotificationDelete.class);
+        adapter.setOutputChannel(inputChannel);
         return adapter;
     }
 
     @Bean
     @ServiceActivator(inputChannel = "pubsubInputChannel")
-    public MessageHandler handleMessage(BasicAcknowledgeablePubsubMessage pubsubMessage) {
+    public MessageHandler handleMessage() {
         return message -> {
+            BasicAcknowledgeablePubsubMessage pubsubMessage = message.getHeaders().get(GcpPubSubHeaders.ORIGINAL_MESSAGE, BasicAcknowledgeablePubsubMessage.class);
             try {
                 pubsubMessage.ack();
-                String notificationMessage = pubsubMessage.getPubsubMessage().getData().toStringUtf8();
-                NotificationDelete delete = objectMapper().readValue(notificationMessage, NotificationDelete.class);
+                PubsubMessage payload = Objects.requireNonNull(pubsubMessage.getPubsubMessage());
+                String notificationMessage = payload.getData().toString(StandardCharsets.UTF_8);
+                log.info("Message received: {}", notificationMessage);
+                NotificationDelete delete = objectMapper.readValue(notificationMessage, NotificationDelete.class);
                 notificationService.deleteNotificationByNotificationId(delete);
             } catch (Exception exception) {
+                log.error("Exception occurred while deleting notification for user {}", message, exception);
                 pubsubMessage.nack();
             }
         };
